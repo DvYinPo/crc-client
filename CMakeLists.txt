@@ -10,6 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CRC_LIB_DIR ${CMAKE_SOURCE_DIR}/lib)
+set(APP_ICON_RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/resources/app.rc")
+set(TARGET_NAME "crc-client-qt")
 
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets LinguistTools)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets LinguistTools)
@@ -33,25 +35,25 @@ set_target_properties(crc_lib PROPERTIES
   IMPORTED_LOCATION ${CRC_LIB_DIR}/libcrc_shared.dll)
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-  qt_add_executable(crc-client-qt
+  qt_add_executable(${TARGET_NAME}
     MANUAL_FINALIZATION
     ${PROJECT_SOURCES}
   )
   qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 else()
-  add_executable(crc-client-qt ${PROJECT_SOURCES})
+  add_executable(${TARGET_NAME} ${PROJECT_SOURCES})
   qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 endif()
 
-target_link_libraries(crc-client-qt PRIVATE Qt${QT_VERSION_MAJOR}::Widgets crc_lib)
+target_link_libraries(${TARGET_NAME} PRIVATE Qt${QT_VERSION_MAJOR}::Widgets crc_lib)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.crc-client-qt)
+  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.${TARGET_NAME})
 endif()
-set_target_properties(crc-client-qt PROPERTIES
+set_target_properties(${TARGET_NAME} PROPERTIES
   ${BUNDLE_ID_OPTION}
   MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
   MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -60,7 +62,7 @@ set_target_properties(crc-client-qt PROPERTIES
 )
 
 include(GNUInstallDirs)
-install(TARGETS crc-client-qt
+install(TARGETS ${TARGET_NAME}
   BUNDLE DESTINATION .
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -69,6 +71,8 @@ install(TARGETS crc-client-qt
 
 # 添加windeployqt步骤
 if(WIN32)
+  target_sources(${TARGET_NAME} PRIVATE ${APP_ICON_RESOURCE})
+
   # 查找windeployqt工具
   get_target_property(_qmake_executable Qt${QT_VERSION_MAJOR}::qmake IMPORTED_LOCATION)
   get_filename_component(_qt_bin_dir "${_qmake_executable}" DIRECTORY)
@@ -80,24 +84,24 @@ if(WIN32)
   endif()
 
   # 添加自定义目标用于打包
-  add_custom_command(TARGET crc-client-qt POST_BUILD
+  add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
     COMMAND "${CMAKE_COMMAND}" -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/package"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/package"
-    COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:crc-client-qt> "${CMAKE_CURRENT_BINARY_DIR}/package"
+    COMMAND "${CMAKE_COMMAND}" -E copy $<TARGET_FILE:${TARGET_NAME}> "${CMAKE_CURRENT_BINARY_DIR}/package"
     COMMAND "${CMAKE_COMMAND}" -E copy "${CRC_LIB_DIR}/libcrc_shared.dll" "${CMAKE_CURRENT_BINARY_DIR}/package"
-    COMMAND "${WINDEPLOYQT_EXECUTABLE}" --compiler-runtime "${CMAKE_CURRENT_BINARY_DIR}/package/$<TARGET_FILE_NAME:crc-client-qt>"
+    COMMAND "${WINDEPLOYQT_EXECUTABLE}" --compiler-runtime "${CMAKE_CURRENT_BINARY_DIR}/package/$<TARGET_FILE_NAME:${TARGET_NAME}>"
     COMMENT "Deploying Qt libraries and creating standalone package..."
   )
 
   # 创建打包目标
   add_custom_target(package
-    DEPENDS crc-client-qt
-    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_BINARY_DIR}/package" "${CMAKE_CURRENT_BINARY_DIR}/crc-client-qt"
-    COMMAND "${CMAKE_COMMAND}" -E tar "cfv" "${CMAKE_CURRENT_BINARY_DIR}/crc-client-qt.zip" --format=zip "${CMAKE_CURRENT_BINARY_DIR}/crc-client-qt"
+    DEPENDS ${TARGET_NAME}
+    COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_BINARY_DIR}/package" "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}"
+    COMMAND "${CMAKE_COMMAND}" -E tar "cfv" "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}.zip" --format=zip "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_NAME}"
     COMMENT "Creating final package..."
   )
 endif()
 
 if(QT_VERSION_MAJOR EQUAL 6)
-  qt_finalize_executable(crc-client-qt)
+  qt_finalize_executable(${TARGET_NAME})
 endif()

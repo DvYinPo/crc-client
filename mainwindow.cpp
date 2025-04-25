@@ -21,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
   ui->setupUi(this);
   this->statusBar()->setSizeGripEnabled(false);
+  setWindowTitle("CRC Client");
 
   std::vector<std::string> list = CRC::getPoly();
   for (auto item : list)
